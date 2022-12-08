@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<db:config name="Database_Config" doc:name="Database Config" doc:id="746cc80e-a3b9-40e1-9346-ba9a128f50aa" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="Mahesh1438@" database="collegedb" />
+	</db:config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="1ea96cb3-5846-4d98-91f2-4bf840e8da21" >
+		<http:listener-connection host="0.0.0.0" port="8083" />
+	</http:listener-config>
+	<flow name="testFlow" doc:id="c2219e7d-b8d8-4777-b364-719695361327" >
+		<http:listener doc:name="Listener" doc:id="9fa372fb-f615-4286-82bd-22c558cb88da" config-ref="HTTP_Listener_config" path="/select"/>
+		<set-variable value="#[attributes.queryParams.Name]" doc:name="Set Variable" doc:id="08954fd5-ba90-43e5-ba2e-187c2b9837ef" variableName="person" />
+		<db:select doc:name="Select" doc:id="2b60a1b7-c172-42d9-958b-b22f67c22532" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM collegedb.student_marks where Name =:value]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'value': vars.person}]]]></db:input-parameters>
+		</db:select>
+		<choice doc:name="Choice" doc:id="dbb553ff-3edc-4206-8566-42b0ae8e132f" >
+			<when expression="#[sizeOf(payload) == 0]">
+				<db:select doc:name="Select" doc:id="fa9d1cf8-f668-4e66-830e-faa4dacbdbeb" config-ref="Database_Config">
+					<db:sql><![CDATA[SELECT * FROM collegedb.student_marks]]></db:sql>
+				</db:select>
+				<ee:transform doc:name="Transform Message" doc:id="4868971d-0dd4-4418-b71a-4232ce59b4a1">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			</when>
+			<when expression="#[payload != []]">
+				<ee:transform doc:name="Transform Message" doc:id="c9bdaf15-114b-4456-9ac9-4ace40e2fc3d">
+					<ee:message>
+						<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message" doc:id="c0b5b3ee-bda6-4460-a4ae-f5218e82925e" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"Message": "No Data "
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+	</flow>
+	<flow name="SelectFlow" doc:id="6eec0edc-c069-435a-9b13-a250335b372c" >
+		<http:listener doc:name="Listener" doc:id="d8528ae1-a18c-472a-8e5c-37032cee1ac0" path="/query" config-ref="HTTP_Listener_config"/>
+		<db:select doc:name="Select" doc:id="26588bca-d783-4d47-a311-63059cbe5ee2" config-ref="Database_Config">
+			<db:sql ><![CDATA[SELECT * FROM collegedb.student_marks where Name =:value]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'value': attributes.queryParams.Name}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="b4c38ca8-d694-4d3a-965c-80d650cd69a7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
